@@ -138,6 +138,27 @@ describe("worker routes", () => {
     });
   });
 
+  it("accepts application json with charset parameters", async () => {
+    const response = await dispatch(
+      new IncomingRequest("https://example.com/tts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify({
+          text: "hello world",
+        }),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("audio/mpeg");
+    expect(createAudioStreamMock).toHaveBeenCalledWith({
+      text: "hello world",
+      voice: undefined,
+    });
+  });
+
   it("rejects non-json tts requests", async () => {
     const response = await dispatch(
       new IncomingRequest("https://example.com/tts", {

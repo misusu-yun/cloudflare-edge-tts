@@ -35,23 +35,30 @@ function parseBody(body: unknown) {
 async function primeAudioStream(stream: ReadableStream<Uint8Array>) {
   const reader = stream.getReader();
   const firstChunk = await reader.read();
+  let firstChunkConsumed = false;
 
   return new ReadableStream<Uint8Array>({
-    async start(controller) {
+    async pull(controller) {
       try {
-        if (!firstChunk.done && firstChunk.value) {
-          controller.enqueue(firstChunk.value);
-        }
+        if (!firstChunkConsumed) {
+          firstChunkConsumed = true;
 
-        while (true) {
-          const chunk = await reader.read();
-          if (chunk.done) {
+          if (firstChunk.done) {
             controller.close();
             return;
           }
 
-          controller.enqueue(chunk.value);
+          controller.enqueue(firstChunk.value);
+          return;
         }
+
+        const chunk = await reader.read();
+        if (chunk.done) {
+          controller.close();
+          return;
+        }
+
+        controller.enqueue(chunk.value);
       } catch (error) {
         controller.error(error);
       }
